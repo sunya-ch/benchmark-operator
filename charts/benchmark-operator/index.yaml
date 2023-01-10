@@ -3,12 +3,12 @@ entries:
   benchmark-operator:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2021-07-26T15:01:08.253997+09:00"
+    created: "2023-01-10T09:33:47.265951+09:00"
     description: A Helm chart for Kubernetes
-    digest: a526efd402b482ac1c66999b64f52419c4d3fbd913abf052952cfbc3ce9fb44a
+    digest: 733f2afd7ae45c766b16a786a73f993d494c4706a3ec292c84503ae93c4e72d6
     name: benchmark-operator
     type: application
     urls:
     - https://raw.githubusercontent.com/sunya-ch/benchmark-operator/master/charts/benchmark-operator/benchmark-operator-0.1.0.tgz
     version: 0.1.0
-generated: "2021-07-26T15:01:08.25312+09:00"
+generated: "2023-01-10T09:33:47.264939+09:00"
