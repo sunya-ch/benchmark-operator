@@ -20,9 +20,12 @@ The option **runtime_class** can be set to specify an optional
 runtime_class to the podSpec runtimeClassName.  This is primarily
 intended for Kata containers.
 
+The option **annotations** can be set to apply the specified
+annotations to the pod metadata.
+
 ## Running the benchmark
 
-Here is an example of the [benchmark CR](../resources/crds/ripsaw_v1alpha1_servicemesh_cr.yaml):
+Here is an example of the [benchmark CR](../config/samples/servicemesh/cr.yaml):
 
 ```yaml
 apiVersion: ripsaw.cloudbulldozer.io/v1alpha1
@@ -108,7 +111,7 @@ spec:
 You can run it by:
 
 ```bash
-oc apply -f resources/crds/ripsaw_v1alpha1_servicemesh_cr.yaml # if edited the original one
+oc apply -f config/samples/servicemesh/cr.yaml # if edited the original one
 ```
 
 ## Visualize the report

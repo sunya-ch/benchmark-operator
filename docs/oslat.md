@@ -5,13 +5,16 @@ The goal of the oslat workload in the benchmark-operator is to run oslat inside 
 
 ## Running oslat
 
-Given that you followed instructions to deploy operator, you can modify [cr.yaml](../resources/crds/ripsaw_v1alpha1_oslat.yaml) to your needs.
+Given that you followed instructions to deploy operator, you can modify [cr.yaml](../config/samples/oslat/cr.yaml) to your needs.
 It is recommended to define pod requests and limits when running oslat test, to give guaranteed CPUs to the pods. It is also expected to have the
 realtime kernel installed with required isolation for pods using the [Performance Add-On Operator](https://github.com/openshift-kni/performance-addon-operators).
 
 The option **runtime_class** can be set to specify an optional
 runtime_class to the podSpec runtimeClassName.  This is primarily
 intended for Kata containers.
+
+The option **annotations** can be set to apply the specified
+annotations to the pod metadata.
 
 An example CR might look like this
 
@@ -27,6 +30,7 @@ spec:
   workload:
     name: "oslat"
     args:
+      node_selector: "<nodeSelector for the RT worker>"
       runtime: "1m"
       disable_cpu_balance: true
       use_taskset: true
@@ -42,7 +46,8 @@ spec:
 You can run it by:
 
 ```bash
-oc apply -f resources/crds/ripsaw_v1alpha1_oslat_cr.yaml # if edited the original one
+# kubectl apply -f config/samples/oslat/cr.yaml # if edited the original one
+# kubectl apply -f <path_to_file> # if created a new cr file
 ```
 ## Looking at results
 

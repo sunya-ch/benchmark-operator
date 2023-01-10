@@ -5,11 +5,20 @@ metadata:
   name: 'image-pull-{{ trunc_uuid }}'
   namespace: '{{ operator_namespace }}'
 spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ workload_args.job_timeout|default(3600) }}
   parallelism: {{ workload_args.pod_count | default(1) | int }}
   template:
     metadata:
       labels:
         app: image-pull-{{ trunc_uuid }}
+        benchmark-uuid: {{ uuid }}
+{% if workload_args.annotations is defined %}
+      annotations:
+{% for annotation, value in workload_args.annotations.items() %}
+        "{{annotation}}": "{{value}}"
+{% endfor %}
+{% endif %}
     spec:
 {% if workload_args.runtime_class is defined %}
       runtimeClassName: "{{ workload_args.runtime_class }}"
@@ -49,7 +58,7 @@ spec:
             value: "{{ test_user | default("ripsaw") }}"
           - name: clustername
             value: "{{ clustername }}"
-{% if elasticsearch is defined %}
+{% if elasticsearch.url %}
           - name: es
             value: "{{ elasticsearch.url }}"
           - name: es_index
@@ -96,6 +105,6 @@ spec:
             --retries {{ workload_args.retries | default(0) | int }}
             --image "{{ my_image }}";
 {% endfor %}
-      imagePullPolicy: Always
+        imagePullPolicy: Always
       restartPolicy: Never
 {% include "metadata.yml.j2" %}

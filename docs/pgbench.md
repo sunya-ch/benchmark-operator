@@ -5,7 +5,7 @@
 ## Running pgbench
 
 Given that you followed instructions to deploy operator,
-you can modify [cr.yaml](../resources/crds/ripsaw_v1alpha1_pgbench_cr.yaml) to your needs.
+you can modify [cr.yaml](../config/samples/pgbench/cr.yaml) to your needs.
 
 The pgbench workload needs to be pointed at one or more existing PostgreSQL databases via the CR file.
 
@@ -77,6 +77,9 @@ Note that the `add2` and `log2` values may not end up testing 100% of the databa
 The `runtime_class` option can be set to specify an optional
 runtime_class to the podSpec runtimeClassName.  This is primarily
 intended for Kata containers.
+
+The option `annotations` can be set to apply the specified
+annotations to the pod metadata.
 
 Once done creating/editing the resource file, you can run it by:
 

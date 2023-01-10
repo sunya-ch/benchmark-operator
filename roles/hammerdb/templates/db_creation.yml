@@ -1,16 +1,27 @@
+---
 apiVersion: batch/v1
-kind: "job"
+kind: Job
 metadata:
   name: "{{ ansible_operator_meta.name }}-creator-{{ trunc_uuid }}"
   namespace: "{{ operator_namespace }}"
 spec:
-  ttlSecondsAfterFinished: 600
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ workload_args.job_timeout|default(3600) }}
   template:
     metadata:
       labels:
         app: hammerdb_creator-{{ trunc_uuid }}
         type: {{ ansible_operator_meta.name }}-bench-creator-{{ trunc_uuid }}
-        benchmark-operator-uuid: {{ uuid }}
+        benchmark-uuid: {{ uuid }}
+{% if workload_args.annotations is defined or workload_args.server_annotations is defined %}
+      annotations:
+{% for annotation, value in workload_args.annotations.items() %}
+        "{{annotation}}": "{{value}}"
+{% endfor %}
+{% for annotation, value in workload_args.server_annotations.items() %}
+        "{{annotation}}": "{{value}}"
+{% endfor %}
+{% endif %}
     spec:
 {% if workload_args.pin is sameas true %}
       nodeSelector:
@@ -43,5 +54,5 @@ spec:
         configMap:
           name: "{{ ansible_operator_meta.name }}-creator-{{ trunc_uuid }}"
           defaultMode: 0640
-      restartPolicy: OnFailure
+      restartPolicy: Never
 {% include "metadata.yml.j2" %}

@@ -33,7 +33,10 @@ spec:
       # vm_cores: 2
       # Memory that will be available inside the VM
       # Default: 5G
-      # vm_cores: 10G
+      # vm_memory: 10G
+      # VM bus type: virtio, sata, or scsi
+      # Default: virtio
+      # vm_bus: virtio
       # test types, see fio documentation
       jobs:
         - write
@@ -67,8 +70,6 @@ spec:
       # Can be one of Filesystem,Block Default: Filesystem
       pvcvolumemode: Block
       storagesize: 5Gi
-      #rook_ceph_drop_caches: True
-      #rook_ceph_drop_cache_pod_ip: 192.168.111.20
 #######################################
 #  EXPERT AREA - MODIFY WITH CAUTION  #
 #######################################

@@ -19,7 +19,7 @@ The benchmark-operator integration here is meant to run only some workloads usef
 ## Running kube-burner
 
 Given that you followed instructions to deploy benchmark-operator. Kube-burner needs an additional serviceaccount and clusterrole to run. Available at [kube-burner-role.yml](../resources/kube-burner-role.yml)
-You can modify kube-burner's [cr.yaml](../resources/crds/ripsaw_v1alpha1_kube-burner_cr.yaml) to fit your requirements.
+You can modify kube-burner's [cr.yaml](../config/samples/kube-burner/cr.yaml) to fit your requirements.
 
 ----
 
@@ -49,6 +49,23 @@ Each iteration of this workload creates the following objects:
   - 1 deployment holding a client application for the previous database
   - 1 service pointing to the postgresl database
 
+- **node-density-cni**. Creates a **single namespace with a number of applications equals to job_iterations**. This application consists on two deployments (a node.js webserver and a simple client that curls the webserver) and a service that is used by the client to reach the webserver.
+Each iteration of this workload creates the following objects:
+  - 1 deployment holding a node.js webserver
+  - 1 deployment holding a client application for curling the webserver
+  - 1 service pointing to the webserver
+
+    The Readiness Probe of the client pod depends on being able to reach the webserver so that the PodReady latencies collected by kube-burner reflect network connectivity.
+
+- **node-density-cni-policy**. Creates a **single namespace with a number of applications equals to job_iterations**. This application consists on two deployments (a node.js webserver and a simple client that curls the webserver) and a service that is used by the client to reach the webserver.
+Each iteration of this workload creates the following objects:
+  - 1 deployment holding a node.js webserver
+  - 1 deployment holding a client application for curling the webserver
+  - 1 service pointing to the webserver
+
+    A NetworkPolicy to deny all connections is created in the namspace first and then NetworkPolicies specifically applying the connection of each client-webserver pair are applied. The Readiness Probe of the client pod depends on being able to reach the webserver so that the PodReady latencies collected by kube-burner reflect network connectivity.
+
+
 - **max-namespaces**: This workload is a cluster limits focused test which creates maximum possible namespaces across the cluster. This is a namespaced workload, meaning that kube-burner **will create as many namespaces with these objects as the configured job_iterations**.
   - 1 deployment holding a postgresql database
   - 5 deployments consisting of a client application for the previous database
@@ -64,7 +81,7 @@ Each iteration of this workload creates the following object:
   - 1 pod. (sleep)
 
 - **concurrent-builds**: Creates a buildconfig, imagestream and corresponding build for a set application. **This will create as many namespaces with these objects as the configured job_iterations**. 
-See https://github.com/cloud-bulldozer/e2e-benchmarking/tree/master/workloads/kube-burner/builds for example parameters for each application
+See https://github.com/cloud-bulldozer/e2e-benchmarking/tree/master/workloads/kube-burner for example parameters for each application
 Each iteration of this workload creates the following object:
   - 1 imagestream (dependent on application type set)
   - 1 buildconfig (also dependent on application type set)
@@ -76,7 +93,7 @@ The workload type is specified by the parameter `workload` from the `args` objec
 
 All kube-burner's workloads support the following parameters:
 
-- **`workload`**: Type of kube-burner workload. As mentioned before, allowed values are cluster-density, node-density and node-density-heavy
+- **``workload``**: Type of kube-burner workload. As mentioned before, allowed values are cluster-density, node-density and node-density-heavy
 - **``default_index``**: ElasticSearch index name. Defaults to __ripsaw-kube-burner__
 - **``job_iterations``**: How many iterations to execute of the specified kube-burner workload
 - **``qps``**: Limit object creation queries per second. Defaults to __5__
@@ -103,6 +120,8 @@ Where key defaults to __node-role.kubernetes.io/worker__ and value defaults to e
 - **``step``**: Prometheus step size, useful for long benchmarks. Defaults to 30s
 - **``metrics_profile``**: kube-burner metric profile that indicates what prometheus metrics kube-burner will collect. Defaults to `metrics.yaml` in node-density workloads and `metrics-aggregated.yaml` in the remaining. Detailed in the [Metrics section](#Metrics) of this document
 - **``runtime_class``** : If this is set, the benchmark-operator will apply the runtime_class to the podSpec runtimeClassName.
+- **``annotations``** : If this is set, the benchmark-operator will set the specified annotations on the pod's metadata.
+- **``extra_env_vars``** : This dictionary defines a set of fields that will be injected to the kube-burner pod as environment variables. e.g. `extra_env_vars: {"foo": "bar", "foo2": "bar2"}`
 
 kube-burner is able to collect complex prometheus metrics and index them in a ElasticSearch. This feature can be configured by the prometheus object of kube-burner's CR.
 
@@ -186,14 +205,23 @@ Keep in mind that the object templated declared in this remote configuration fil
       replicas: 1
 ```
 
-> `kube-burner` is able to use go template based configuration files, in addition to the default behaviour, this template can reference environment variables using the syntax `{{ .MY_ENV_VAR }}`. The kube-burner job created by `benchmark-operator` always injects the environment variable `prom_es` with the value of `prometheus.es_url`. This can be useful to overwrite the ElasticSearch URL in remote configuration files as shown in the code snippet below.
+> `kube-burner` is able to use go template based configuration files, in addition to the default behaviour, this template can reference environment variables using the syntax `{{ .MY_ENV_VAR }}`. The kube-burner job created by `benchmark-operator` always injects a list of environment variables which can be defined with the parameter `extra_env_vars` mentioned previously. This can be useful to parametrize remote configuration files as shown in the code snippet below.
+
+Supossing a CR with `extra_env_vars` configured as:
+```yaml
+workload:
+  args:
+    extra_env_vars:
+      INDEXING: true
+      ES_SERVER: https://example-es.instance.com:9200
+```
 
 ```yaml
 global:
   writeToFile: false
   indexerConfig:
-    enabled: true
-    esServers: ["{{.prom_es}}"]
+    enabled: {{.INDEXING}}
+    esServers: ["{{.ES_SERVER}}"]
     insecureSkipVerify: true
     defaultIndex: ripsaw-kube-burner
     type: elastic
@@ -243,3 +271,40 @@ It supports different severities:
 - critical: Prints a fatal message with the alarm description to stdout and exits execution inmediatly with rc != 0
 
 More information can be found at the [Kube-burner docs site.](https://kube-burner.readthedocs.io/en/latest/alerting/)
+
+## Reading configuration from a configmap
+
+Kube-burner is able to fetch it's own configuration from a configmap. To do so you just have to set the argument `configmap` pointing to a configmap in the same namespace where kube-burner is in the CR. This configmap needs to have a config.yml file to hold the main kube-burner's configuration file(apart from the required object templates), and optionally can contain a metrics.yml and alerts.yml files. An example configuration CR would look like:
+
+```yaml
+---
+apiVersion: ripsaw.cloudbulldozer.io/v1alpha1
+kind: Benchmark
+metadata:
+  name: kube-burner-configmap-cfg
+  namespace: benchmark-operator
+spec:
+  metadata:
+    collection: false
+  prometheus:
+    prom_token: ThisIsNotAValidToken
+    prom_url: https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091
+  workload:
+    name: kube-burner
+    args:
+      configmap: kube-burner-config
+      cleanup: true
+      pin_server: {"node-role.kubernetes.io/worker": ""}
+      image: quay.io/cloud-bulldozer/kube-burner:latest
+      log_level: info
+      step: 30s
+      node_selector:
+        key: node-role.kubernetes.io/worker
+        value:
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+```
+
+To create a configmap with the kube-burner configurations you can use `kubectl create configmap --from-file=<directory with all configuration files> kube-burner-config`
+

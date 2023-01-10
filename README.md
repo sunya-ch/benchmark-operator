@@ -5,10 +5,11 @@ a performance baseline of Kubernetes cluster on your provider.
 
 
 ## Installation (Default)
-The easiest way to install the operator is through the operator-sdk methods provided in the `Makefile`. 
+The easiest way to install the operator is through the operator-sdk methods provided in the `Makefile`.
 
 ```bash
 git clone https://github.com/cloud-bulldozer/benchmark-operator
+cd benchmark-operator
 make deploy
 ```
 
@@ -16,14 +17,15 @@ If you wish to build a version of the operator from your local copy of the repo,
 
 ```bash
 git clone https://github.com/cloud-bulldozer/benchmark-operator
-make podman-build podman-push deploy IMG=$YOUR_IMAGE
+cd benchmark-operator
+make image-build image-push deploy IMG=$YOUR_IMAGE
 ```
 
-> Note: building the image requires podman 
+> Note: building the image requires podman
 
-## Installation (Helm) 
+## Installation (Helm)
 
-Installing the benchmark-operator is easiest by using the helm chart and can be done with the following commands. This requires
+Installing the benchmark-operator via Helm can be done with the following commands. This requires
 your machine to have Helm installed. [Install Helm](https://helm.sh/docs/intro/install/)
 
 > Note: If running on openshift you'll need to run this command before installing the chart. `oc adm policy -n benchmark-operator add-scc-to-user privileged -z benchmark-operator`
@@ -33,6 +35,8 @@ your machine to have Helm installed. [Install Helm](https://helm.sh/docs/intro/i
 ```bash
 git clone https://github.com/cloud-bulldozer/benchmark-operator
 cd benchmark-operator/charts/benchmark-operator
+kubectl create namespace benchmark-operator
+oc adm policy -n benchmark-operator add-scc-to-user privileged -z benchmark-operator # Openshift Only
 helm install benchmark-operator . -n benchmark-operator --create-namespace
 ```
 
@@ -49,7 +53,7 @@ helm uninstall benchmark-operator -n benchmark-operator
 | Workload                       | Use                    | ElasticSearch indexing  | Reconciliation usage       | VM support (kubevirt) | Kata Containers | CI Tested |
 | ------------------------------ | ---------------------- | ------------------ | -------------------------- | --------------------- | --------------- | ------------ |
 | [UPerf](docs/uperf.md)         | Network Performance    | Yes                |  Used, default : 3second  | Working                | Working         | Yes |
-| [Iperf3](docs/iperf.md)       | Network Performance     | No                 |  Used, default : 3second  | Not Supported          | Preview         | Yes |
+| [Iperf3](docs/iperf3.md)       | Network Performance     | No                 |  Used, default : 3second  | Not Supported          | Preview         | Yes |
 | [fio](docs/fio_distributed.md) | Storage IO             | Yes                |  Used, default : 3second  | Working                | Working         | Yes |
 | [Sysbench](docs/sysbench.md)   | System Performance     | No                 |  Used, default : 3second  | Not Supported          | Preview         | Yes |
 | [YCSB](docs/ycsb.md)           | Database Performance   | Yes            |  Used, default : 3second  | Not Supported          | Preview         | Yes |
@@ -79,11 +83,14 @@ Why did we decide to switch to this? Our operator would implement long running t
 However, long running tasks blocks the Operator, causing us to delete the Operator and re-create the operator to
 un-block it. The benchmarks mentioned above that state `Used` for Reconciliation, no longer have this issue.
 
+# E2E tests
+Benchmark-operator includes a series of end 2 end tests that can be triggered in local. More info in the [documentation.](docs/e2e-ci.md#running-in-local)
+
 ## Optional workload images
 Optional locations for workload images can now be added easily without the need to rebuild the operator.
 To do so in the workload args section of the CR add image: [location]
 
-NOTE: This is not a required arguement. If omitted it will default to the currently verified workload image.
+NOTE: This is not a required argument. If omitted it will default to the currently verified workload image.
 Additionally, this is *NOT* enabled for YCSB
 
 For Example:
@@ -109,8 +116,8 @@ spec:
 Workloads that are triggered through [benchmark-wrapper](https://github.com/cloud-bulldozer/benchmark-wrapper)
 can optionally pass the debug flag through the workload CR.
 
-NOTE: This is not a required arguement. If omitted it will default to the default logging level of 
-the benchmark-wrapper
+NOTE: This is not a required argument. If omitted it will default to the default logging level of
+the benchmark-wrapper. 
 
 For Example:
 
@@ -157,17 +164,11 @@ spec:
       image: my.location/foo:latest
 ```
 
-## Installation
-[Installation](docs/installation.md)
-
 ## Contributing
 [Contributing](CONTRIBUTING.md)
 
 ## Metadata Collection
 [Metadata Collection](docs/metadata.md)
-
-## Cerberus Integration
-[Cerberus Integration](docs/cerberus.md)
 
 ## Indexing to Elasticsearch
 [Indexing to Elasticsearch](docs/elastic.md)
@@ -179,6 +180,6 @@ spec:
 [Cache dropping](docs/cache_dropping.md)
 
 ## Community
-Key Members(slack_usernames): ravi, mohit, dry923, rsevilla or rook
+Key Members(slack_usernames):  sejug, mohit, dry923, rsevilla or rook
 * [**#sig-scalability on Kubernetes Slack**](https://kubernetes.slack.com)
 * [**#forum-perfscale on CoreOS Slack**](https://coreos.slack.com)

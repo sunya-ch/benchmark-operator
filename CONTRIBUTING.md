@@ -71,7 +71,7 @@ Example `playbook.yml`:
 
 ### Workload triggers
 [CRD](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/) holds the definition of the resource.
-The operator triggers roles based on the conditions defined in a CR ([example](resources/crds/ripsaw_v1alpha1_uperf_cr.yaml)) which will influence which roles the
+The operator triggers roles based on the conditions defined in a CR ([example](config/samples/uperf/cr.yaml) which will influence which roles the
 [playbook](playbook.yml) executes.
 Other vars may be defined that can modify the workload run conditions.
 
@@ -121,41 +121,15 @@ case of failure or when disabled. This ensures no interference with subsequent w
 
 ### The operator container image
 Any changes to the [roles](roles/) tree or to the [playbook](playbook.yml) file will necessitate a new build of the operator container image.
-The benchmark-operator container can be built using [podman](https://podman.io/) and pushed to a public repository.
-The public repository could be [quay](https://quay.io) in which case you'll need to:
+The benchmark-operator container can be built and pushed to a public repository, which could be [quay](https://quay.io), using the provided Makefile.
+
+To test with your own operator image, you will need to delete the current deployment and then build, push, and redeploy using your operator container image as follows:
 
 ```bash
-$ podman build -f build/Dockerfile -t quay.io/<username>/benchmark-operator:testing .
-
-$ podman push quay.io/<username>/benchmark-operator:testing
+# kubectl delete deployment -n benchmark-operator benchmark-controller-manager
+# make image-build image-push deploy IMG=quay.io/<username>/benchmark-operator:testing
 ```
-
-Note: you can also use docker, and no, we'll not judge ;)
-
 `:testing` is simply a tag. You can define different tags to use with your image, like `:latest` or `:master`
-
-To test with your own operator image, you will need the [operator](resources/operator.yml) file to point the container image to your testing version.
-Be sure to do this outside of your git tree to avoid mangling the official file that points to our stable image.
-
-This can be done as follows:
-
-```bash
-$ sed 's/image:.*/image: quay.io\/<username>\/benchmark-operator:testing/' resources/operator.yaml > /my/testing/operator.yaml
-```
-
-You can then redeploy operator
-```bash
-# kubectl delete -f resources/operator.yaml
-# kubectl apply -f /my/testing/operator.yaml
-```
-Redefine CRD
-```bash
-# kubectl apply -f resources/crds/ripsaw_v1alpha1_ripsaw_crd.yaml
-```
-Apply a new CR
-```bash
-# kubectl apply -f resources/crds/ripsaw_v1alpha1_uperf_cr.yaml
-```
 
 ## CI
 Currently we have a CI that runs against PRs.
@@ -166,7 +140,7 @@ To ensure that adding new a workload will not break other workloads and its
 behavior can be predicted, we've mandated writing tests before PR can be merged.
 
 If a new workload is added, please follow the instructions to add a testcase to
-[test.sh](test,sh):
+[test.sh](test.sh):
 * copy an existing test like [uperf test](tests/test_uperf.sh)
 * Add commands needed to setup the workload specific requirements if any
 * Add a valid cr file to [test_crs](tests/test_crs/) directory for your workload

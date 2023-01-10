@@ -10,14 +10,22 @@ spec:
       labels:
         app: flent-bench-client-{{ trunc_uuid }}
         clientfor: {{ item.metadata.labels.app }}
+        benchmark-uuid: {{ uuid }}
+{% if workload_args.multus.enabled is sameas true or workload_args.annotations is defined or workload_args.client_annotations is defined %}
+  annotations:
 {% if workload_args.multus.enabled is sameas true %}
-      annotations:
-        k8s.v1.cni.cncf.io/networks: {{ workload_args.multus.client }}
+    k8s.v1.cni.cncf.io/networks: {{ workload_args.multus.server}}
+{% endif %}
+{% for annotation, value in workload_args.annotations.items() %}
+    "{{annotation}}": "{{value}}"
+{% endfor %}
+{% for annotation, value in workload_args.client_annotations.items() %}
+    "{{annotation}}": "{{value}}"
+{% endfor %}
 {% endif %}
     spec:
 {% if workload_args.hostnetwork is sameas true %}
       hostNetwork : true
-      serviceAccountName: benchmark-operator
 {% endif %}
       affinity:
         podAntiAffinity:
@@ -41,7 +49,7 @@ spec:
             value: "{{ test_user | default("ripsaw") }}"
           - name: clustername
             value: "{{ clustername }}"
-{% if elasticsearch is defined %}
+{% if elasticsearch.url %}
           - name: es
             value: "{{ elasticsearch.url }}"
           - name: es_index
@@ -67,7 +75,7 @@ spec:
              export hostnet={{workload_args.hostnetwork}};
              cd /tmp/flent-test;
              while true; do
-               if [[ $(redis-cli -h {{bo.resources[0].status.podIP}} get start) =~ 'true' ]]; then
+               if [[ $(redis-cli -h {{bo.resources[0].status.podIP}} get start-{{trunc_uuid}}) =~ 'true' ]]; then
 {% for test in workload_args.test_types %}
                  run_snafu --tool flent --ftest {{test}} -u {{ uuid }} -r $h --user {{test_user | default("ripsaw")}} \
 {% if workload_args.debug is defined and workload_args.debug %}
@@ -81,14 +89,14 @@ spec:
 
                break;
              done;
-             redis-cli -h {{bo.resources[0].status.podIP}} set start false"
+             redis-cli -h {{bo.resources[0].status.podIP}} set start-{{trunc_uuid}} false"
         volumeMounts:
           - name: flent-tmp
             mountPath: "/tmp/flent-test"
       volumes:
         - name: flent-tmp
           emptyDir: {}
-      restartPolicy: OnFailure
+      restartPolicy: Never
 {% if workload_args.pin is sameas true %}
       nodeSelector:
           kubernetes.io/hostname: '{{ workload_args.pin_client }}'

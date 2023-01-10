@@ -5,10 +5,16 @@ metadata:
   name: fio-test-{{ trunc_uuid }}
   namespace: '{{ operator_namespace }}'
 data:
+# FIXME: I don't think prefill works correctly for a list of numjobs values, only for 1 of them
+{% for numjobs in workload_args.numjobs %}
 {% if workload_args.prefill is defined and workload_args.prefill is sameas true %}
   fiojob-prefill: |
     [global]
+{% if workload_args.pvcvolumemode is defined and workload_args.pvcvolumemode == "Block" %}
+    filename={{fio_path}}
+{% else %}
     directory={{fio_path}}
+{% endif %}
     filename_format=f.\$jobnum.\$filenum
     clocksource=clock_gettime
     kb_base=1000
@@ -22,7 +28,7 @@ data:
 {% endif %}
     iodepth=1
     direct=1
-    numjobs=1
+    numjobs={{numjobs}}
     
     [write]
     rw=write
@@ -40,19 +46,26 @@ data:
 {% set loopvar = workload_args.bs %}
 {% set loopvar_str = 'bs' %}
 {% endif %}
-{% for numjobs in workload_args.numjobs %}
 {% for i in loopvar %}
 {% for job in workload_args.jobs %}
   fiojob-{{job}}-{{i}}-{{numjobs}}: |
     [global]
+{% if workload_args.pvcvolumemode is defined and workload_args.pvcvolumemode == "Block" %}
+    filename={{fio_path}}
+{% else %}
     directory={{fio_path}}
+{% endif %}
     filename_format=f.\$jobnum.\$filenum
     write_bw_log=fio
     write_iops_log=fio
     write_lat_log=fio
+{% if workload_args.log_sample_rate is defined %}
+    log_avg_msec={{ workload_args.log_sample_rate }}
+{% endif %}
+{% if workload.log_hist_msec is defined %}
     write_hist_log=fio
-    log_avg_msec={{workload_args.log_sample_rate}}
-    log_hist_msec={{workload_args.log_sample_rate}}
+    log_hist_msec={{ workload_args.log_hist_msec }}
+{% endif %}
     clocksource=clock_gettime
     kb_base=1000
     unit_base=8

@@ -11,6 +11,13 @@ spec:
     metadata:
       labels:
         app: fs-drift-benchmark-{{ trunc_uuid }}
+        benchmark-uuid: {{ uuid }}
+{% if workload_args.annotations is defined %}
+      annotations:
+{% for annotation, value in workload_args.annotations.items() %}
+        "{{annotation}}": "{{value}}"
+{% endfor %}
+{% endif %}
     spec:
 {% if workload_args.runtime_class is defined %}
       runtimeClassName: "{{ workload_args.runtime_class }}"
@@ -29,12 +36,12 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       restartPolicy: Never
       containers:
-        - name: benchmark-server
+        - name: fs-drift
 {% if hostpath is defined %}
           securityContext:
             privileged: true
 {% endif %}
-          image: {{ workload_args.image | default('quay.io/cloud-bulldozer/fs-drift:master') }}
+          image: {{ workload_args.image | default('quay.io/cloud-bulldozer/fs-drift:latest') }}
           # example of what to do when debugging image
           # image: quay.io/bengland2/fs-drift:latest
           imagePullPolicy: Always
@@ -47,7 +54,7 @@ spec:
             value: "{{ test_user | default("ripsaw") }}"
           - name: clustername
             value: "{{ clustername }}"
-{% if elasticsearch is defined %}
+{% if elasticsearch.url %}
           - name: es
             value: "{{ elasticsearch.url }}"
           - name: es_index
@@ -74,7 +81,7 @@ spec:
               rm -rf ${TMPDIR};
               mkdir -pv ${TMPDIR}/RESULTS;
               mkdir -pv {{fs_drift_path}}/fs_drift_test_data;
-              python /tmp/fs-drift/subscriber {{bo.resources[0].status.podIP}};
+              python /tmp/fs-drift/subscriber {{bo.resources[0].status.podIP}} {{ trunc_uuid }};
               cat /tmp/fs-drift/params;
               run_snafu
               --tool fs-drift
@@ -111,5 +118,4 @@ spec:
             type: DirectoryOrCreate
 {% endif %}
       restartPolicy: Never
-      serviceAccountName: benchmark-operator
 {% include "metadata.yml.j2" %}

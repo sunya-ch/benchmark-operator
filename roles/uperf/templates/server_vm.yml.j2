@@ -5,11 +5,20 @@ metadata:
   name: 'uperf-server-{{ item }}-{{ trunc_uuid }}'
   namespace: '{{ operator_namespace }}'
   labels:
-    benchmark-operator-uuid: {{ uuid }}
+    benchmark-uuid: {{ uuid }}
     benchmark-operator-workload: uperf
     benchmark-operator-role: server
     app : uperf-bench-server-{{ item }}-{{ trunc_uuid }}
     type : {{ ansible_operator_meta.name }}-bench-server-{{ trunc_uuid }}
+{% if workload_args.annotations is defined or workload_args.server_annotations is defined %}
+  annotations:
+{% for annotation, value in workload_args.annotations.items() %}
+    "{{annotation}}": "{{value}}"
+{% endfor %}
+{% for annotation, value in workload_args.server_annotations.items() %}
+    "{{annotation}}": "{{value}}"
+{% endfor %}
+{% endif %}
 spec:
   domain:
     cpu:
@@ -64,6 +73,6 @@ spec:
           - dnf install -y uperf redis git
           - redis-cli -h {{ bo.resources[0].status.podIP }} setnx {{ trunc_uuid }} 0
           - redis-cli -h {{ bo.resources[0].status.podIP }} incr {{ trunc_uuid }}
-          - uperf -s -v -P 20000
+          - uperf -s -v -P 30000
     name: cloudinitdisk
 status: {}

@@ -5,14 +5,20 @@
 ## Running Sysbench
 
 Given that you followed instructions to deploy operator,
-you can modify [cr.yaml](../resources/crds/ripsaw_v1alpha1_sysbench_cr.yaml)
+you can modify [cr.yaml](../config/samples/sysbench/cr.yaml)
 
 The optional argument **runtime_class** can be set to specify an
 optional runtime_class to the podSpec runtimeClassName.  This is
 primarily intended for Kata containers.
 
+The option **annotations** can be set to apply the specified
+annotations to the pod metadata.
+
+The `pin_node` parameter allows to place the sysbench pod 
+on a specific node, using the `hostname` label.
+
 Note: please ensure you set 0 for other workloads if editing the
-[cr.yaml](../resources/crds/ripsaw_v1alpha1_sysbench_cr.yaml) file otherwise
+[cr.yaml](../config/samples/sysbench/cr.yaml) file otherwise
 
 your resource file may look like this:
 
@@ -29,6 +35,7 @@ spec:
       enabled: true
       #kind: vm
       # If you want to run this as a VM uncomment the above
+      #pin_node: "worker-0.mylab.example.com"
       tests:
       - name: cpu
         parameters:
@@ -44,7 +51,7 @@ You can find more information at [sysbench documentation](https://github.com/ako
 Once done creating/editing the resource file, you can run it by:
 
 ```bash
-# kubectl apply -f resources/crds/ripsaw_v1alpha1_sysbench_cr.yaml # if edited the original one
+# kubectl apply -f config/samples/sysbench/cr.yaml # if edited the original one
 # kubectl apply -f <path_to_file> # if created a new cr file
 ```
 

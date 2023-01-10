@@ -10,6 +10,7 @@ spec:
     metadata:
       labels:
         app: "trex-traffic-gen-pod-{{ trunc_uuid }}"
+        benchmark-uuid: {{ uuid }}
       annotations:
         k8s.v1.cni.cncf.io/networks: '[
 {% set i = namespace(value=0) %}
@@ -112,7 +113,7 @@ spec:
           value: "{{ value }}"
 {% endfor %}
 {% endif %}
-{% if elasticsearch is defined %}
+{% if elasticsearch.url %}
         - name: es
           value: "{{ elasticsearch.url }}"
         - name: es_index
@@ -137,7 +138,6 @@ spec:
       - name: modules
         hostPath:
           path: /lib/modules
-      restartPolicy: OnFailure
-      serviceAccountName: benchmark-operator
+      restartPolicy: Never
 {% include "metadata.yml.j2" %}
 

@@ -1,0 +1,88 @@
+name: Run e2e tests
+on:
+  pull_request_target:
+    types: [labeled, synchronize]
+  push:
+    branches:
+      - master  
+  workflow_dispatch:
+    inputs: 
+      test_list:
+        description: Only run tests that match the regular expression
+        default: ""
+      img:
+        description: Benchmark-operator image location
+        default: quay.io/rht_perf_ci/benchmark-operator:e2e
+concurrency:
+  group: e2e-ci
+jobs:
+  e2e:
+    name: E2E testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: "github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'ok to test'))"
+    env:
+      BATS_TESTS: ${{ github.event.inputs.test_list }}
+      IMG: ${{ github.event.inputs.img }}
+    steps:
+
+    - name: Set env vars  # Workaround: When the workflow is triggered by events different from workflow_dispatch the IMG env var is not set
+      run: echo "IMG=quay.io/rht_perf_ci/benchmark-operator:e2e" >> $GITHUB_ENV
+      if: github.event_name != 'workflow_dispatch'
+
+    - name: Check out code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+      if: github.event_name == 'pull_request_target'
+
+    - name: Check out code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+      if: "github.event_name == 'workflow_dispatch' || github.event_name == 'push'"
+
+    - name: Install bats
+      run: make install-bats
+
+    - name: Authenticate against OCP cluster
+      run: oc login -u ${OPENSHIFT_USER} -p ${OPENSHIFT_PASSWORD} ${OPENSHIFT_SERVER} --insecure-skip-tls-verify=true
+      env:
+        OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
+        OPENSHIFT_USER: ${{ secrets.OPENSHIFT_USER }}
+        OPENSHIFT_PASSWORD: ${{ secrets.OPENSHIFT_PASSWORD }}
+
+    - name: Login in quay
+      run: podman login quay.io -u ${QUAY_USER} -p ${QUAY_TOKEN}
+      env:
+        QUAY_USER: ${{ secrets.QUAY_CI_USER }}
+        QUAY_TOKEN: ${{ secrets.QUAY_CI_TOKEN }}
+
+    - name: Build, push and deploy benchmark-operator
+      run: make image-build image-push deploy
+
+    - name: Ensure benchmark-operator is running
+      run: kubectl rollout status -n benchmark-operator --timeout=5m deploy/benchmark-controller-manager
+
+    - name: Execute e2e tests
+      run: e2e/run_tests_ci.sh
+      env:
+        TERM: linux
+
+    - name: Undeploy benchmark-operator
+      run: make undeploy
+      if: always() # always run even if the previous step fails
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: benchmark-operator-debug-${{ github.run_id }}
+        path: e2e/artifacts
+
+    - name: Publish Test Report
+      uses: mikepenz/action-junit-report@v2.4.3
+      if: always()
+      with:
+        report_paths: e2e/report.xml

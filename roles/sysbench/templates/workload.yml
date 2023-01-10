@@ -6,12 +6,24 @@ metadata:
   name: "sysbench-{{ trunc_uuid }}"
   namespace: "{{ operator_namespace }}"
 spec:
-  ttlSecondsAfterFinished: 600
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ workload_args.job_timeout|default(3600) }}
   template:
     metadata:
       labels:
        app: sysbench-{{ trunc_uuid }}
+       benchmark-uuid: {{ uuid }}
+{% if workload_args.annotations is defined %}
+      annotations:
+{% for annotation, value in workload_args.annotations.items() %}
+        "{{annotation}}": "{{value}}"
+{% endfor %}
+{% endif %}
     spec:
+{% if workload_args.pin_node is defined %}
+      nodeSelector:
+        kubernetes.io/hostname: '{{ workload_args.pin_node }}'
+{% endif %}
 {% if workload_args.runtime_class is defined %}
       runtimeClassName: "{{ workload_args.runtime_class }}"
 {% endif %}
@@ -33,5 +45,5 @@ spec:
         configMap:
           name: "sysbench-config-{{ trunc_uuid }}"
           defaultMode: 0777
-      restartPolicy: OnFailure
+      restartPolicy: Never
 {% include "metadata.yml.j2" %}

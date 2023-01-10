@@ -1,19 +1,10 @@
 ---
-- name: Get benchmark state
-  k8s_facts:
-    api_version: ripsaw.cloudbulldozer.io/v1alpha1
-    kind: Benchmark
-    name: "{{ ansible_operator_meta.name }}"
-    namespace: "{{ operator_namespace }}"
-  register: benchmark_state
-
 - operator_sdk.util.k8s_status:
     api_version: ripsaw.cloudbulldozer.io/v1alpha1
     kind: Benchmark
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ operator_namespace }}"
     status:
-      state: "Metadata Collecting"
       complete: false
       metadata: "Collecting"
   when: benchmark_state.resources[0].status.state is not defined
@@ -58,25 +49,6 @@
     set_fact:
       backpack_cur_gen: "{{ my_daemonset | json_query('resources[].metadata.generation')|first }}"
 
-  - operator_sdk.util.k8s_status:
-      api_version: ripsaw.cloudbulldozer.io/v1alpha1
-      kind: Benchmark
-      name: "{{ ansible_operator_meta.name }}"
-      namespace: "{{ operator_namespace }}"
-      status:
-        state: "Metadata Collecting"
-        complete: false
-        metadata: "Collecting"
-    when: backpack_orig_gen != backpack_cur_gen
-
-  - name: Get benchmark state
-    k8s_facts:
-      api_version: ripsaw.cloudbulldozer.io/v1alpha1
-      kind: Benchmark
-      name: "{{ ansible_operator_meta.name }}"
-      namespace: "{{ operator_namespace }}"
-    register: benchmark_state
-
   - block:
   
     - name: Get initial pod list
@@ -95,9 +67,19 @@
           name: "{{ ansible_operator_meta.name }}"
           namespace: "{{ operator_namespace }}"
           status:
-            state: null
-            complete: false
-            metadata: "Complete"
+            state: Complete
+            complete: true
+            metadata: Complete
+        when: workload.name == "backpack"
+
+      - operator_sdk.util.k8s_status:
+          api_version: ripsaw.cloudbulldozer.io/v1alpha1
+          kind: Benchmark
+          name: "{{ ansible_operator_meta.name }}"
+          namespace: "{{ operator_namespace }}"
+          status:
+            metadata: Complete
+        when: workload.name != "backpack"
       
       - name: Get benchmark state
         k8s_facts:

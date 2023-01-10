@@ -21,19 +21,36 @@ spec:
           spec:
             type: object
             properties:
-              uuid: 
+              uuid:
                 type: string
               elasticsearch:
+                default: {}
                 type: object
                 properties:
                   url:
                     type: string
+                    default: ""
                   index_name:
                     type: string
                   parallel:
                     type: boolean
+                    default: false
                   verify_cert:
                     type: boolean
+                    default: true
+              snappy:
+                default: {}
+                type: object
+                properties:
+                  url:
+                    type: string
+                    default: ""
+                  user:
+                    type: string
+                    default: ""
+                  password:
+                    type: string
+                    default: ""
               prometheus:
                 type: object
                 properties:
@@ -46,6 +63,7 @@ spec:
                   prom_token:
                     type: string
               system_metrics:
+                default: {}
                 type: object
                 properties:
                   collection:
@@ -73,6 +91,22 @@ spec:
               workload:
                 x-kubernetes-preserve-unknown-fields: true
                 type: object
+                properties:
+                  name:
+                    type: string
+                    description: Workload name
+                  args:
+                    x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                    properties:
+                      debug:
+                        type: boolean
+                        default: false
+                        description: Set debug log level in the workload
+                      job_timeout:
+                        type: integer
+                        description: Timeout used for jobs deployed by this benchmark
+                        default: 3600
               job_params:
                 type: array
                 items:
@@ -101,9 +135,6 @@ spec:
                   privileged:
                     default: false
                     type: boolean
-                  serviceaccount:
-                    default: default
-                    type: string
                   stockpileSkipTags:
                     default: []
                     items:
@@ -121,10 +152,6 @@ spec:
                     default: false
                     type: boolean
                 type: object
-              cerberus_url:
-                type: string
-              cerberus_validate_certs:
-                type: boolean
               cleanup:
                 type: boolean
               test_user:
@@ -138,38 +165,41 @@ spec:
               drop_cache_rook_ceph:
                 type: boolean
           status:
+            default: {}
             type: object
             properties:
               complete:
                 type: boolean
+                default: false
+                description: Benchmark is completed
               metadata:
                 type: string
+                description: Metadata collection status
               state:
                 type: string
+                description: Benchmark status
               suuid:
                 type: string
+                description: Benchmark short UUID
               uuid:
                 type: string
-              cerberus:
-                type: string
+                description: Benchmark UUID
               pod_hi_idx:
                 type: string
               pod_low_idx:
-               type: string
+                type: string
               node_hi_idx:
                 type: string
               node_low_idx:
-               type: string
-              pod_idx:
-               type: string
-              node_idx:
-               type: string
-              system_metrics:
-               type: string
-               default: Not collected
-              message:
                 type: string
-                default: None
+              pod_idx:
+                type: string
+              node_idx:
+                type: string
+              system_metrics:
+                type: string
+                default: Not collected
+                description: System metrics collection status
     additionalPrinterColumns:
     - name: Type
       type: string
@@ -183,10 +213,6 @@ spec:
       type: string
       description: The state of metadata collection
       jsonPath: .status.metadata
-    - name: Cerberus
-      type: string
-      description: If Cerberus is connected or not
-      jsonPath: .status.cerberus
     - name: System metrics
       type: string
       description: System metrics collect status

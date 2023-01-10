@@ -22,8 +22,14 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      securityContext:
-        runAsNonRoot: true
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                - key: node-role.kubernetes.io/workload
+                  operator: Exists
       containers:
       - name: manager
         args:
@@ -45,7 +51,7 @@ spec:
         - name: OPERATOR_NAME
           value: "benchmark-operator"
         - name: MAX_CONCURRENT_RECONCILES_BENCHMARK_RIPSAW_CLOUDBULLDOZER_IO
-          value: "1"
+          value: "4"
         - name: ANSIBLE_VERBOSITY_BENCHMARK_RIPSAW_CLOUDBULLDOZER_IO
           value: "4"
         securityContext:
@@ -63,19 +69,23 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
       - name: redis-master
-        image: k8s.gcr.io/redis:v1
+        image: quay.io/cloud-bulldozer/redis:latest
         env:
           - name: MASTER
             value: "true"
+          - name: ALLOW_EMPTY_PASSWORD
+            value: "yes"
         ports:
           - containerPort: 6379
         resources:
+          requests: 
+            cpu: "100m"
           limits:
             cpu: "2.0"
         volumeMounts:
-          - mountPath: /redis-master-data
+          - mountPath: /data
             name: data
-      serviceAccountName: operator
+      serviceAccountName: benchmark-operator
       terminationGracePeriodSeconds: 10
       volumes:
         - name: data

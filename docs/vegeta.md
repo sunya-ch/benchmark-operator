@@ -5,11 +5,17 @@
 ## Running Vegeta
 
 Given that you followed instructions to deploy operator,
-you can modify Vegeta's [cr.yaml](../resources/crds/ripsaw_v1alpha1_vegeta_cr.yaml) to make it fit with your requirements.
+you can modify Vegeta's [cr.yaml](../config/samples/vegeta/cr.yaml) to make it fit with your requirements.
 
 The option **runtime_class** can be set to specify an optional
 runtime_class to the podSpec runtimeClassName.  This is primarily
 intended for Kata containers.
+
+The option **annotations** can be set to apply the specified
+annotations to the pod metadata.
+
+The **node_selector** option can be used to limit the nodes where
+the vegeta pods are deployed.
 
 ```yaml
 apiVersion: ripsaw.cloudbulldozer.io/v1alpha1
@@ -24,6 +30,7 @@ spec:
   workload:
     name: vegeta
     args:
+      # node_selector: "vegeta=true"
       clients: 2
       image: quay.io/cloud-bulldozer/vegeta:latest
       hostnetwork: false

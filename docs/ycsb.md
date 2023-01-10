@@ -5,7 +5,7 @@
 ## Running YCSB
 
 Given that you followed instructions to deploy operator,
-you can modify [cr.yaml](../resources/crds/ripsaw_v1alpha1_ycsb_cr.yaml) to your needs.
+you can modify [cr.yaml](../config/samples/ycsb/cr.yaml) to your needs.
 
 YCSB is a workload that requires a database/key-value store to run workloads against and benchmark.
 
@@ -68,9 +68,11 @@ so that the ycsb pod can access the API of database.
 
 `runtime_class`: If this is set, the benchmark-operator will apply the runtime_class to the podSpec runtimeClassName.
 
+`annotations` If this is set, the benchmark-operator will set the specified annotations on the pods' metadata.
+
 Once done creating/editing the resource file, you can run it by:
 
 ```bash
-# kubectl apply -f resources/crds/ripsaw_v1alpha1_ycsb_cr.yaml # if edited the original one
+# kubectl apply -f config/samples/ycsb/cr.yaml # if edited the original one
 # kubectl apply -f <path_to_file> # if created a new cr file
 ```

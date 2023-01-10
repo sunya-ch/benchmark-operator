@@ -1,7 +1,5 @@
+      serviceAccountName: benchmark-operator
 {% if metadata.collection is sameas true and metadata.targeted is sameas true %}
-{% if metadata.serviceaccount != "default" %}
-      serviceAccountName: {{ metadata.serviceaccount }}
-{% endif %}
       initContainers:
       - name: backpack
         image: {{ metadata.image }}
@@ -29,6 +27,7 @@
         imagePullPolicy: Always
         securityContext:
           privileged: {{ metadata.privileged }}
+          readOnlyRootFilesystem: false
           runAsNonRoot: false
         env:
           - name: my_node_name

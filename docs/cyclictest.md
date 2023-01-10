@@ -10,7 +10,7 @@ SCHED_FIFO real-time tasks which are higher priority.
 
 ## Running cyclictest
 
-Given that you followed instructions to deploy operator, you can modify [cr.yaml](../resources/crds/ripsaw_v1alpha1_cyclictest.yaml) to your needs.
+Given that you followed instructions to deploy operator, you can modify [cr.yaml](../config/samples/cyclictest/cr.yaml) to your needs.
 It is recommended to define pod requests and limits when running cyclict test, to give guaranteed CPUs to the pods. It is also expected to have the
 realtime kernel installed with required isolation for pods using the [Performance Add-On Operator](https://github.com/openshift-kni/performance-addon-operators).
 
@@ -28,6 +28,7 @@ spec:
   workload:
     name: "cyclictest"
     args:
+      node_selector: "<nodeSelector for the RT worker>"
       duration: "1m"
       disable_cpu_balance: true
       stressng: false
@@ -43,7 +44,8 @@ spec:
 You can run it by:
 
 ```bash
-oc apply -f resources/crds/ripsaw_v1alpha1_cyclictest_cr.yaml # if edited the original one
+# kubectl apply -f config/samples/cyclictest/cr.yaml # if edited the original one
+# kubectl apply -f <path_to_file> # if created a new cr file
 ```
 ## Looking at results
 

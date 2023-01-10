@@ -5,11 +5,14 @@
 ## Running stressng
 
 Given that you followed instructions to deploy operator,
-you can modify [cr.yaml](../resources/crds/ripsaw_v1alpha1_stressng.yaml) to your needs.
+you can modify [cr.yaml](../config/samples/stressng/cr.yaml) to your needs.
 
 The optional argument **runtime_class** can be set to specify an
 optional runtime_class to the podSpec runtimeClassName.  This is
 primarily intended for Kata containers.
+
+The option **annotations** can be set to apply the specified
+annotations to the pod metadata.
 
 An example CR might look like this
 

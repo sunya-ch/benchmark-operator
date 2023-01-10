@@ -5,27 +5,20 @@ nameOverride: ""
 
 # -- (string) overrides naming of all resources
 fullnameOverride: "benchmark-operator"
-
-# -- map for custom cluster roles for certain benchmarks like kubevirt
-rbac:
-  clusterRoles:
-    kubevirt: false
-    selfProvisioner: false
-
 operator:
 
   # -- how many replicas for the operator deployment
   replicaCount: 1
 
   image:
-    repository: quay.io/benchmark-operator/benchmark-operator
+    repository: quay.io/cloud-bulldozer/benchmark-operator
     pullPolicy: Always
-    tag: master
+    tag: latest
 
   redisImage:
-    repository: k8s.gcr.io/redis
+    repository: quay.io/cloud-bulldozer/redis
     pullPolicy: Always
-    tag: v1
+    tag: latest
 
   resources:
     limits:

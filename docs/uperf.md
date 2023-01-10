@@ -5,7 +5,7 @@
 ## Running UPerf
 
 Given that you followed instructions to deploy operator,
-you can modify [cr.yaml](../resources/crds/ripsaw_v1alpha1_uperf_cr.yaml)
+you can modify [cr.yaml](../config/samples/uperf/cr.yaml)
 
 ```yaml
 apiVersion: ripsaw.cloudbulldozer.io/v1alpha1
@@ -54,11 +54,9 @@ spec:
       nthrs:
         - 1
       runtime: 30
-      colocate: false
-      density_range: [low, high]
-      node_range: [low, high]
-      step_size: addN, log2
 ```
+
+ By default, the uperf server and client pods will be preferably scheduled on different nodes, thanks to a `podAntiAffinity` rule. In scenarios with more than 1 pair, all clients and servers will be scheduled to the same node. 
 
 `client_resources` and `server_resources` will create uperf client's and server's containers with the given k8s compute resources respectively [k8s resources](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/)
 
@@ -67,6 +65,12 @@ spec:
 `runtime_class` If this is set, the benchmark-operator will apply the runtime_class to the podSpec runtimeClassName.
 
 *Note:* `runtime_class` has only been tested with Kata containers. Only include `runtime_class` if using Kata containers.
+
+`annotations` If this is set, the benchmark-operator will set the specified annotations on the pods' metadata.
+
+`server_annotations` If this is set, the benchmark-operator will set the specified annotations on the server pods' metadata.
+
+`client_annotations` If this is set, the benchmark-operator will set the specified annotations on the client pods' metadata.
 
 `hostnetwork` will test the performance of the node the pod will run on.
 
@@ -79,9 +83,8 @@ spec:
 `pin_client` what node to pin the client pod to.
 
 `pair` how many instances of uperf client-server pairs. `pair` is applicable for `pin: true` only.
-If `pair` is not specified, the operator will use the value in `density_range` to detemine the number of pairs.
-See **Scale** section for more info. `density_range` can do more than `pair` can, but `pair` support is retained 
-for backward compatibility.
+
+`protos`: choose between `tcp`, `udp` or/and `sctp`. In case `sctp` is choosen, SCTP module has to be previously loaded in the environment.
 
 `multus[1]` Configure our pods to use multus.
 
@@ -198,61 +201,55 @@ To enable Multus in Ripsaw, here is the relevant config.
       ...
 
 ```
-### Scale
-Scale in this context refers to the ability to enumerate UPERF 
-client-server pairs during test in a control fashion using the following knobs.
+### Advanced Service types
 
-`colocate: true` will place each client and server pod pair on the same node.
+Benchmark operator now also supports different service types, it can create `NodePort` and `LoadBalancer` (only metallb) 
+type services along with the current default `ClusterIP` type.
 
-`density_range` to specify the range of client-server pairs that the test will iterate.
-
-`node_range` to specify the range of nodes that the test will iterate.
-
-`step_size` to specify the incrementing method.
-
-Here is one scale example:
+No pre-requisites needed for `NodePort` service, as long as the ports used by uperf(30000 to 30012) are allowed at the node level, 
+which is the cluster default.
 
 ```
+NAME                TYPE           CLUSTER-IP      EXTERNAL-IP       PORT(S) 
+uperf-service-np    NodePort       172.30.177.81   <none>            30000:31955/TCP,30001:31935/TCP,30002:31942/TCP,30001:31935/UDP,30002:31942/UDP
+```
+
+For `metallb` type, there are certain pre-requisites, 
+1.  Installation of [MetalLB](https://metallb.universe.tf/) operator and CRD
+2.  Configuration of [BGP](https://github.com/metallb/metallb-operator#create-a-bgp-peer-object)
+3.  Configuration of [AddressPool](https://github.com/metallb/metallb-operator#create-an-address-pool-object) for lb service
+4.  Configuration of extenal router for BGP
+
+`metallb` type creates 2 services per benchmark CR (for each protocol, `tcp` and `udp`) and they will share the external IP like below
+
+```
+NAME                TYPE           CLUSTER-IP      EXTERNAL-IP       PORT(S) 
+uperf-service-lb    LoadBalancer   172.30.177.99   192.168.216.102   30000:30976/TCP,30001:30652/TCP,30002:30099/TCP 
+uperf-service-lb2   LoadBalancer   172.30.126.71   192.168.216.102   30001:31312/UDP,30002:30776/UDP 
+```
+
+#### CR file inputs
+
+##### For NodePort
+```yaml
       ...
-      pin: false
-      colocate: false
-      density_range: [1,10]
-      node_range: [1,128]
-      step_size: log2
+      name: uperf
+      serviceip: true
+      servicetype: "nodeport"
       ...
 ```
-Note, the `scale` mode is mutually exlusive to `pin` mode with the `pin` mode having higher precedence.
-In other words, if `pin:true` the test will deploy pods on `pin_server` and `pin_client` nodes
-and ignore `colocate`, `node_range`, and the number of pairs to deploy is specified by the
- `density_range.high` value.
 
-In the above sample, the `scale` mode will be activated since `pin: false`. In the first phase, the 
-pod instantion phase, the system gathers node inventory and may reduce the `node_range.high` value 
-to match the number of worker node available in the cluster.
-
-According to `node_range: [1,128]`, and `density_range:[1,10]`, the system will instantiate 10 pairs on 
-each of 128 nodes. Each pair has a node_idx and a pod_idx that are used later to control
-which one and when they should run the UPERF workload, After all pairs are up and ready,
-next comes the test execution phase.
-
-The scale mode iterates the test as a double nested loop as follows:
-```
-   for node with node_idx less-or-equal node_range(low, high. step_size):
-      for pod with pod_idx less-or-equal density_range(low, high, step_size):
-          run uperf 
-```
-Hence, with the above params, the first iteration runs the pair with node_idx/pod_idx of {1,1}. After the first
-run has completed, the second interation runs 2 pairs of {1,1} and {1,2} and so on.
-
-The valid `step_size` methods are: addN and log2. `N` can be any integer and `log2` will double the value at each iteration i.e. 1,2,4,8,16 ...
-By choosing the appropriate values for `density_range` and `node_range`, the user can generate most if not all
-combinations of UPERF data points to exercise datapath performance from many angles.
-
-Once done creating/editing the resource file, you can run it by:
-
-```bash
-# kubectl apply -f resources/crds/ripsaw_v1alpha1_uperf_cr.yaml # if edited the original one
-# kubectl apply -f <path_to_file> # if created a new cr file
+##### For MetalLB
+`metallb`
+```yaml
+      ...
+      name: uperf
+      serviceip: true
+      servicetype: "metallb"
+      metallb:
+        addresspool: "addresspool-l3"
+        service_etp: "Cluster" # Either `Cluster` or `Local`
+      ...
 ```
 
 ## Running Uperf in VMs through kubevirt/cnv [Preview]
